@@ -130,6 +130,9 @@ pub struct Config {
     // input or require the user to manually dismiss them?
     #[serde(default)]
     pub unpause_on_input: bool,
+    // If want to ignore paused colors
+    #[serde(default)]
+    pub ignore_paused_colors: bool,
 
     // Enable/disable notification replace functionality.  I don't like how some apps do it.
     #[serde(default = "maths_utility::val_true")]

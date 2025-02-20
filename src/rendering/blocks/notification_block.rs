@@ -8,6 +8,8 @@ use crate::maths_utility::{self, Rect, Vec2};
 use crate::rendering::layout::{DrawableLayoutElement, Hook};
 use crate::rendering::window::{NotifyWindow, UpdateModes};
 
+use crate::config::Config;
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct NotificationBlockParameters {
     pub monitor: i8,
@@ -42,11 +44,13 @@ impl DrawableLayoutElement for NotificationBlockParameters {
 
         window.context.set_operator(cairo::Operator::Source);
 
+        let cfg = Config::get();
+
         // Draw border + background.
         // If anything isn't updating, we count it as paused, which overrides urgency.
         // Otherwise, we evaluate urgency.
         let bd_color = {
-            if window.update_mode != UpdateModes::all() {
+            if !cfg.ignore_paused_colors && window.update_mode != UpdateModes::all() {
                 self.border_color_paused.as_ref().unwrap_or(&self.border_color)
             } else {
                 match window.notification.urgency {
