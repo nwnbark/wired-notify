@@ -543,6 +543,31 @@ impl NotifyWindowManager {
         false
     }
 
+    // Pause or Unpause
+    pub fn pause_window_id(&mut self, window_id: WindowId, desired: bool, toggle: bool) -> bool {
+        if let Some(window) = self.find_window_mut(window_id) {
+            match toggle {
+                true => {
+                    window.update_mode.toggle(UpdateModes::FUSE);
+                },
+                false => {
+                    match desired {
+                        true => {
+                            window.update_mode = UpdateModes::DRAW;
+                        },
+                        false => {
+                            window.update_mode = UpdateModes::all();
+                        }
+                    }
+                }
+            }
+            self.dirty = true;
+            return true;
+        }
+
+        false
+    }
+
     // @TODO: how about a shortcut for dropping all windows on one monitor?  Support multi-monitor
     // better first.
     pub fn drop_windows(&mut self) {

@@ -129,6 +129,23 @@ pub fn handle_socket_message(
                         manager.drop_window_id(id);
                     }
                 }
+                "pause" => {
+                    let (notif_id, toggle_str) = args
+                        .split_once(',')
+                        .ok_or(CLIError::Parse("Malformed action request."))?;
+
+                    let id = get_window_id(notif_id, manager)?;
+
+                    if let Some(desired) = ON_VALS.contains(&toggle_str).then_some(true)
+                        .or_else(|| OFF_VALS.contains(&toggle_str).then_some(false))
+                    {
+                        manager.pause_window_id(id, desired, false);
+                    } else if toggle_str == "toggle" {
+                        manager.pause_window_id(id, false, true);
+                    } else {
+                        return Err(CLIError::Parse("Value is not of type [toggle|bool]"));
+                    }
+                }
                 "action" => {
                     let (notif_id, action_id) = args
                         .split_once(',')
@@ -245,6 +262,7 @@ pub fn process_cli(args: Vec<String>) -> Result<ShouldRun, String> {
     opts.optflag("h", "help", "print this help menu");
     opts.optopt("z", "dnd", "enable/disable do not disturb mode", "[on|off]");
     opts.optopt("d", "drop", "drop/close a notification", "[latest|all|IDX]");
+    opts.optopt("p", "pause", "pause/unpause a notification", "[IDX]:[toggle|on|off]");
     opts.optopt(
         "a",
         "action",
@@ -277,6 +295,7 @@ pub fn process_cli(args: Vec<String>) -> Result<ShouldRun, String> {
 
     // All these options use a socket.
     if matches.opt_present("d")
+        || matches.opt_present("p")
         || matches.opt_present("a")
         || matches.opt_present("s")
         || matches.opt_present("z")
@@ -303,6 +322,31 @@ pub fn process_cli(args: Vec<String>) -> Result<ShouldRun, String> {
             sock.write(format!("drop:{}", to_drop).as_bytes())
                 .map_err(|e| e.to_string())?;
         }
+
+        if let Some(to_pause) = matches.opt_str("p") {
+            let (notification, toggle) = match to_pause.split_once(':') {
+                Some(na) => na,
+                None => {
+                    return Err("Missing ':' in action argument.\n\
+                            Notification and pause toggle arguments must be in the format of \
+                            [IDX]:[toggle|bool]"
+                        .to_owned());
+                }
+            };
+
+            validate_identifier(notification, true)?;
+            if !(ON_VALS.contains(&toggle) || OFF_VALS.contains(&toggle) || toggle == "toggle") {
+                return Err(
+                    "The pause flag takes a bool or \"toggle\" argument after\n\
+                    the notification id, but I didn't recognize any.\n\
+                    Allowed values are: :toggle :[on|off] :[true|false] :[1|0] :[enable|disable]"
+                        .to_owned(),
+                );
+            }
+
+            sock.write(format!("pause:{},{}", notification, toggle).as_bytes())
+                .map_err(|e| e.to_string())?;
+        }        
 
         if let Some(to_action) = matches.opt_str("a") {
             let (notification, action) = match to_action.split_once(':') {
