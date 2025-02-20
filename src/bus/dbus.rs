@@ -15,6 +15,8 @@ use dbus::{
 use dbus_crossroads::Crossroads;
 use image::{self, DynamicImage, ImageBuffer};
 
+use linicon::lookup_icon;
+
 use chrono::{offset::Local, DateTime};
 use serde::Serialize;
 
@@ -408,7 +410,27 @@ impl Notification {
             }
         }
 
-        let app_image = image_from_path(&app_icon);
+        fn get_theme_icon(name: &str, if_failed: String) -> String {
+            match lookup_icon(name.to_lowercase()).next() {
+                Some(Ok(icon_path)) => icon_path.path.to_string_lossy().to_string(),
+                Some(Err(_)) | None => if_failed.clone(),
+            }
+        }
+
+        let fallback_icon = if app_icon.is_empty() {
+            get_theme_icon(&app_name, app_icon.clone())
+        } else {
+            if app_icon.contains('/') {
+                if app_icon.starts_with("file:///") {
+                    app_icon.replace("file:///", "/")
+                } else {
+                    app_icon.clone()
+                }
+            } else {
+                get_theme_icon(&app_icon, app_icon.clone())
+            }
+        };
+        let app_image = image_from_path(&fallback_icon);
 
         // Structs are stored internally in the rust dbus implementation as VecDeque.
         // https://github.com/diwic/dbus-rs/issues/363
