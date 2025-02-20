@@ -155,6 +155,9 @@ pub struct Config {
 
     // A file to print notification info to, for scripting purposes.
     pub print_to_file: Option<String>,
+    // Enable stdout for each json notification.
+    #[serde(default)]
+    pub stdout_notifications: bool,
 
     // Minimum window width and height.  This is used to create the base rect that the notification
     // grows within.

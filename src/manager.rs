@@ -168,6 +168,11 @@ impl NotifyWindowManager {
                 }
             }
 
+            if cfg.stdout_notifications {
+                let json_string = serde_json::to_string(&notification).unwrap();
+                println!("{}", json_string);
+            }
+
             if !maybe_windows.is_empty() {
                 for w in maybe_windows{
                     w.replace_notification(notification.clone(), layout.clone());
